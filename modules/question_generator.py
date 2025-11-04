@@ -1,37 +1,35 @@
-import requests
+# modules/question_generator.py
 import os
-import random
+import requests
+from dotenv import load_dotenv
 
-# Hugging Face API setup
-HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")  # Make sure you set this in your .env file
+load_dotenv()
+
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+
+# a stronger instruction-tuned model
 API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
 
-headers = {"Authorization": f"Bearer {HF_API_KEY}"}
 
-
-def generate_interview_questions(skills, resume_text="", num_questions=10):
+def generate_questions_from_resume(resume_text: str, num_questions: int = 10):
     """
-    Generate AI-based interview questions dynamically based on extracted skills and resume.
+    Generate interview questions based on the given resume text
+    using a Hugging Face instruction-tuned model.
     """
-
-    # Combine all details into a single context
-    prompt = f"""
-    You are an AI interview coach. Read the following resume content and skills, 
-    then generate {num_questions} unique and professional technical interview questions.
-
-    Resume Content: {resume_text[:2000]}  # limit to 2000 chars for efficiency
-    Key Skills: {', '.join(skills)}
-
-    Each question should be:
-    - Relevant to the resume and skills
-    - Technical and professional (like for a job interview)
-    - Clear and short (one sentence)
-    - Different from each other
-    """
+    prompt = (
+        "You are an expert technical interviewer. "
+        "Read the resume text below and generate "
+        f"{num_questions} unique and professional interview questions "
+        "that test the candidate’s knowledge in AI, Machine Learning, Python, and projects mentioned.\n\n"
+        f"Resume:\n{resume_text}\n\n"
+        "Return the questions as a numbered list like:\n"
+        "1. ...\n2. ...\n"
+    )
 
     payload = {
         "inputs": prompt,
-        "parameters": {"max_new_tokens": 500, "temperature": 0.7}
+        "parameters": {"max_new_tokens": 400, "temperature": 0.7, "top_p": 0.9},
     }
 
     try:
@@ -39,32 +37,32 @@ def generate_interview_questions(skills, resume_text="", num_questions=10):
         response.raise_for_status()
         result = response.json()
 
-        if isinstance(result, list):
-            output_text = result[0].get("generated_text", "")
+        # extract generated text
+        if isinstance(result, list) and len(result) > 0 and "generated_text" in result[0]:
+            text = result[0]["generated_text"]
         else:
-            output_text = result.get("generated_text", "")
+            text = str(result)
 
-        # Split into individual questions
-        questions = [q.strip(" .-0123456789") for q in output_text.split("\n") if q.strip()]
-        questions = [q for q in questions if len(q) > 10]  # filter out short lines
+        # clean and split into questions
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        questions = [l for l in lines if any(word in l.lower() for word in ["what", "how", "why", "explain", "tell"])]
 
-        # Fallback if generation fails
-        if not questions:
-            questions = [
-                "What is Machine Learning and its types?",
-                "Tell me about one of your projects in detail.",
-                "Explain a situation where you solved a technical problem.",
-                "What tech stack did you use in your recent project?",
-                "Explain what a neural network is."
-            ]
-        return random.sample(questions, min(num_questions, len(questions)))
+        # remove numbering artifacts and duplicates
+        clean_q = []
+        for q in questions:
+            q = q.lstrip("0123456789. ").strip()
+            if q not in clean_q:
+                clean_q.append(q)
 
+        # ensure we have at least a few questions
+        return clean_q[:num_questions] if clean_q else ["Could not generate enough questions."]
     except Exception as e:
-        print(f"⚠️ Error generating questions: {e}")
+        print("Error generating questions:", e)
+        # simple fallback
         return [
-            "What is Machine Learning and its types?",
-            "Explain the architecture of a Transformer model.",
-            "What are your main technical skills?",
-            "Describe your project experience in AI or ML.",
-            "Explain how you handle model evaluation and improvement."
+            "Describe one project mentioned in your resume.",
+            "Explain the main technologies you used in your work.",
+            "What challenges did you face in your recent project?",
+            "How do you apply Machine Learning in real-world scenarios?",
+            "What improvements would you make to your current skills?",
         ]
