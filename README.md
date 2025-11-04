@@ -19,7 +19,7 @@ The model listens to the user’s **spoken answers**, evaluates grammar and rele
 
 ## 🎨 Demo
 
-![AI Interview Coach Screenshot](images\img1.png)
+![AI Interview Coach Screenshot](images/img1.png)
 
 ---
 
