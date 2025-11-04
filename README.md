@@ -30,7 +30,7 @@ The model listens to the user’s **spoken answers**, evaluates grammar and rele
    ```bash
    git clone https://github.com/Deepika-saravanan/AI-Interview-Coach.git
    cd AI-Interview-Coach
-  ```
+  
 
 2. **Create a virtual environment**
 
@@ -102,5 +102,7 @@ The system uses multiple AI components integrated via Streamlit:
 - Do not push your .env file or API keys to GitHub.
 -.gitignore already excludes .env, .venv/, and data folders.
 -Keep API keys private for security and rate-limit protection.
+
+---
 
 🧑‍💻 Developed by: Deepika Saravanan
